@@ -205,7 +205,7 @@ class PGenerator:
         self.com = 5
         dim = 6144
         # self.k = np.random.normal(5,20,(30,self.com)) + 10
-        self.m = np.random.normal(0,0.02,(30,self.com)) + 0.2/6 # + np.ones((30,self.com)) * np.linspace(0,0.3,self.com)/6
+        self.m = np.random.normal(0,0.05,(30,self.com)) + 0.2/6 # + np.ones((30,self.com)) * np.linspace(0,0.3,self.com)/6
 
         ampmin = 0
         ampmax = 40
@@ -217,7 +217,7 @@ class PGenerator:
                                           ampmean,
                                           ampstd).rvs((30,self.com))
 
-        self.amp = np.random.normal(0,0.1,(30,self.com))
+        self.amp = np.random.normal(0,0.4,(30,self.com))
 
 
         # print("self amp min: ", np.min(self.amp), ", max: ", np.max(self.amp))f

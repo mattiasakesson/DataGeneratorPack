@@ -149,6 +149,9 @@ class Generator_pack:
         id = to_scalar(Ci)[0]
 
         if p is not None:
+
+
+
             # make sure p is in range 0-1 for d 0-1
             dl = np.linspace(0,1,1001)
             p_ = p(dl)
@@ -328,10 +331,14 @@ class PGenerator:
         p = np.squeeze(self.p(C,D))
         # print("p shape: ", np.array(p).shape)
         # print("p min: ", np.min(p), ", max: ", np.max(p))
-        try:
-            deal = np.random.binomial(1, p)
-        except:
-            print("p: ", p)
+        # try:
+        # print("p shape: ", p.shape, "p dtype: ", p.dtype)
+        # for p_ in p:
+        #     print(p_, " - type: ", type(p_))
+        deal = np.random.binomial(1, p)
+        # except:
+
+            # print("p: ", np.min(p), " - ", np.max(p))
 
         return p, deal
 

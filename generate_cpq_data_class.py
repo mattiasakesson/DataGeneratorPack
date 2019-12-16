@@ -329,12 +329,6 @@ class PGenerator:
     def sample(self, C, D):
 
         p = np.squeeze(self.p(C,D))
-        # print("p shape: ", np.array(p).shape)
-        # print("p min: ", np.min(p), ", max: ", np.max(p))
-        # try:
-        # print("p shape: ", p.shape, "p dtype: ", p.dtype)
-        # for p_ in p:
-        #     print(p_, " - type: ", type(p_))
         deal = np.random.binomial(1, p)
         # except:
 

@@ -1,8 +1,6 @@
 import numpy as np
-from matplotlib import pylab as plt
 import tensorflow as tf
 import tensorflow_probability as tfp
-import tensorflow.keras.backend as K
 
 tfd = tfp.distributions
 tfk = tf.keras

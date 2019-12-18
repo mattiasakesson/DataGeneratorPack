@@ -14,32 +14,6 @@ def sigmoid(x):
 def step(x):
     return (np.sign(x)+1)/2
 
-def generate_graph(nr_of_layers,input_shape,output_shape=1, non_linear=np.sin):
-
-    bias = [np.random.rand()*2 - 1 for i in range(nr_of_layers)]
-    bias.append(np.random.rand(output_shape)*2 - 1)
-    lintran = [np.random.rand(input_shape + i, 1) for i in range(nr_of_layers)]
-    lintran.append(np.random.rand(input_shape + nr_of_layers, output_shape) )
-
-    def graph(x_data):
-        layers = [x for x in x_data.T]
-
-        for i in range(nr_of_layers):
-            new_layer = np.squeeze(non_linear(np.matmul(np.array(layers).T, lintran[i]) + bias[i]))
-            layers.append(new_layer)
-
-        layers = np.array(layers).T
-
-        out_put = np.matmul(layers, lintran[nr_of_layers]) + bias[nr_of_layers]
-        return out_put, layers
-    return graph, bias, lintran
-
-def to_cat(in_data,classes):
-
-    e = np.zeros((len(in_data),classes))
-    r = np.int32(np.array(in_data)*classes)
-    e[np.arange(len(in_data)), r] = 1
-    return e, r
 
 def one_hot(x, classes=[4,4,2,4,12,4]):
 
@@ -112,14 +86,14 @@ def C_gen(nr=50000, complete_set=False, copys=1):
 
 class Generator_pack:
 
-    def __init__(self, discount_max=0.4, discount_min=0, discount_mean=0.15, discount_std=0.1, mean_p=0.2, max_p=0.4):
+    def __init__(self, discount_max=0.4, discount_min=0, discount_mean=0.15, discount_std=0.1, min_p=0.0, max_p=1.0):
 
         self.D_gen_base = lambda nr: truncnorm((discount_min - discount_mean) / discount_std,
                                           (discount_max - discount_mean) / discount_std,
                                           discount_mean,
                                           discount_std).rvs(nr)
         self.C_gen = C_gen
-        self.P = PGenerator(C_combinations = C_gen(complete_set=True, copys=1), max_p = max_p, mean_p = mean_p)
+        self.P = PGenerator(C_combinations = C_gen(complete_set=True, copys=1), max_p=max_p, min_p=min_p)
         # self.P = PGenerator(C=None, D=None, max_p = 0.99, mean_p = 0.4)
 
         self.P_gen = self.P.sample
@@ -143,14 +117,12 @@ class Generator_pack:
         #Make sure Ci is a numpy array
         Ci = np.array(Ci)
         #check if Ci is in format one hot (Ci.shape[-1]==30), if so transform back to standard form
-        if Ci.shape[-1]==30:
+        if Ci.shape[-1] == 30:
             Ci = back_transform(Ci)
 
         id = to_scalar(Ci)[0]
 
         if p is not None:
-
-
 
             # make sure p is in range 0-1 for d 0-1
             dl = np.linspace(0,1,1001)
@@ -176,7 +148,7 @@ class Generator_pack:
         D_data = []
         self.copyfunction = copyfunction
 
-        C_combinations = self.C_gen(nr=50000, complete_set=True, copys=1)
+        C_combinations = self.C_gen(complete_set=True, copys=1)
 
         for C in C_combinations:
             n = self.nr_of_sample(C)()
@@ -200,9 +172,11 @@ class Generator_pack:
 class PGenerator:
 
     # If C is filled with data, D is also suppose to be filled with data and M anb b gets normalized to fit max_p and mean_p
-    def __init__(self, C_combinations, max_p=0.4, mean_p=0.2):
+    def __init__(self, C_combinations, max_p=1, min_p=0.2):
 
 
+        self.min_p = min_p
+        self.max_p = max_p
         self.basefunction = np.array([True]*6144)
         self.f = np.empty(6144,object)
         self.com = 5
@@ -222,28 +196,6 @@ class PGenerator:
 
         self.amp = np.random.normal(0,0.4,(30,self.com))
 
-
-        # print("self amp min: ", np.min(self.amp), ", max: ", np.max(self.amp))f
-        # print("C combinations shape: ", C_combinations.shape)
-        # print("C[0]: ", C_combinations[0])
-        # aC_oh = C_combinations
-        #
-        # self.ks = np.matmul(aC_oh, Mk)
-        # self.ms = np.matmul(aC_oh, Mk) * np.matmul(aC_oh, Mm)
-        # amps = np.ones(dim) * max_p  # np.random.rand(dim)*p_max
-        # ampmin=0
-        # ampmax = 1
-        # ampmean = 0.5
-        # ampstd = 0.1
-        #
-        # ampbase = np.random.normal(0,1,(30,self.com))
-        #
-        # self.amps_p = np.zeros((dim, self.com))
-        # for i in range(self.com):
-        #     self.amps_p[:, i] = np.random.rand(dim) ** 4 * amps
-        #     amps = amps - self.amps_p[:, i]
-        # print("amps p shape: ", self.amps_p.shape, ", ks shape: ", self.ks.shape, "ms shape: ", self.ms.shape)
-
         self.ks = np.zeros((6144,self.com))
         self.ms = np.zeros((6144,self.com))
         self.amps_p = np.zeros((6144,self.com))
@@ -253,27 +205,13 @@ class PGenerator:
             self.ks[C_ind] = np.matmul(C,self.k)
             self.ms[C_ind] = np.matmul(C,self.m)
             self.ms[C_ind] = self.ms[C_ind] * self.ks[C_ind]
-            self.amps_p[C_ind] = sigmoid(np.matmul(C,self.amp))*1/self.com
+            self.amps_p[C_ind] = sigmoid(np.matmul(C,self.amp))*1/self.com * (self.max_p - self.min_p)
 
-        # f, ax = plt.subplots(2,2,figsize=(20,20))
-        # ax[0,0].hist(np.reshape(self.ks,-1))
-        # ax[0,0].set_title("k")
-        # ax[0, 1].hist(np.reshape(self.ms/self.ks,-1))
-        # ax[0, 1].set_title("m/k")
-        # ax[1, 1].hist(np.reshape(self.amps_p,-1))
-        # ax[1, 1].set_title("amps")
-        # ax[1, 0].hist(np.reshape(self.ms,-1))
-        # ax[1, 0].set_title("m")
+    def base_func(self, C_ind, d):
+        return np.minimum(1, np.maximum(0, np.sum(
+            np.array([self.amps_p[C_ind, c] * sigmoid(self.ks[C_ind,c] * d - self.ms[C_ind,c]) for c in range(self.com)]), 0)) + self.min_p)
 
-
-        # print("self.amps_p min: ", np.min(self.amps_p), ", max: ", np.max(self.amps_p))
-        # dis(self.ms, "ms")
-
-    def base_func(self,C_ind, d):
-        return np.sum(
-            np.array([self.amps_p[C_ind, c] * sigmoid(self.ks[C_ind,c] * d - self.ms[C_ind,c]) for c in range(self.com)]), 0)
-
-    def get_p_data(self,C,plot=False):
+    def get_p_data(self, C, plot=False):
 
         if len(C) == 30:
             C = back_transform(C)
